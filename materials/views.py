@@ -1,3 +1,4 @@
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, viewsets
 from rest_framework.permissions import IsAuthenticated
@@ -8,6 +9,9 @@ from materials.models import Course, Lesson, Subscription
 from materials.paginators import CustomPagination
 from materials.serializers import CourseSerializer, LessonSerializer, SubscriptionSerializer
 from users.permissions import IsModerators, IsOwner
+from django.utils import timezone
+from datetime import timedelta
+from .tasks import send_course_update_email
 
 
 class CourseViewSet(ModelViewSet):
@@ -42,6 +46,27 @@ class CourseViewSet(ModelViewSet):
             )
         return super().get_permissions()
 
+    def update_course(request, course_id):
+        course = get_object_or_404(Course, id=course_id)
+        now = timezone.now()
+
+        # Проверка времени последнего обновления (например, поле course.last_updated)
+        if course.last_updated and (now - course.last_updated) < timedelta(hours=4):
+            # Только сохраняем изменения, рассылку не делаем
+            course.save()
+            return JsonResponse({'status': 'updated without notification'})
+
+        # Обновление курса
+        course.last_updated = now
+        course.save()
+
+        # Получение подписчиков курса
+        subscribers = course.subscriptions.all()
+        for subscriber in subscribers:
+            send_course_update_email.delay(subscriber.user.email, course.title, "курс")
+
+        return JsonResponse({'status': 'update and notification sent'})
+
     # def get_permissions(self):
     #     if self.action in ['destroy', 'create']:
     #         #  Запретить модераторам удалять и создавать
@@ -75,6 +100,29 @@ class LessonViewSet(viewsets.ModelViewSet):
             # Разрешить модераторам и прошедшим проверку подлинности пользователям просматривать и редактировать
             self.permission_classes = [IsAuthenticated, IsModerators]
         return [permission() for permission in self.permission_classes]
+
+    def update_lesson(request, course_id, lesson_id):
+        course = get_object_or_404(Course, id=course_id)
+        now = timezone.now()
+
+        # Проверка на отправку уведомления (раз в 4 часа для курса)
+        if course.last_updated and (now - course.last_updated) < timedelta(hours=4):
+            # Только сохранить обновление урока
+            lesson = get_object_or_404(Lesson, id=lesson_id)
+            lesson.save()
+            return JsonResponse({'status': 'lesson updated, no notification'})
+
+        # Обновить урок и курс, рассылка
+        lesson = get_object_or_404(Lesson, id=lesson_id)
+        lesson.save()
+        course.last_updated = now
+        course.save()
+
+        subscribers = course.subscriptions.all()
+        for subscriber in subscribers:
+            send_course_update_email.delay(subscriber.user.email, course.title, f"урок {lesson.title}")
+
+        return JsonResponse({'status': 'lesson updated, notification sent'})
 
 
 class LessonCreateAPIView(generics.CreateAPIView):

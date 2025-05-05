@@ -1,7 +1,7 @@
 import os
 from datetime import timedelta
 from pathlib import Path
-
+from celery.schedules import crontab
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -29,7 +29,8 @@ INSTALLED_APPS = [
     "materials",
     "django_filters",
     "rest_framework_simplejwt",
-    "drf_yasg"
+    "drf_yasg",
+    "django_celery_beat",
 ]
 
 MIDDLEWARE = [
@@ -127,3 +128,25 @@ SIMPLE_JWT = {
 }
 
 STRIPE_API_KEY = os.getenv('STRIPE_API_KEY')
+
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+
+
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
+
+EMAIL_HOST = os.getenv('EMAIL_HOST')
+EMAIL_PORT = os.getenv('EMAIL_PORT')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+
+CELERY_BEAT_SCHEDULE = {
+    'deactivate-inactive-users-every-day': {
+        'task': 'materials.tasks.deactivate_inactive_users',
+        'schedule': crontab(hour=0, minute=0),  # каждый день в полночь
+    },
+}
