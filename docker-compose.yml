@@ -1,4 +1,3 @@
-version: '3.9'
 
 services:
   web:
@@ -26,7 +25,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg-isready -U $${POSTGRES_USER}"]
+      test: ["CMD-SHELL", "pg-isready -U $POSTGRES_USER"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -44,7 +43,7 @@ services:
 
   celery:
     build: .
-    command: celery -A Atom_Habits worker --loglevel=info
+    command: celery -A DjangoDRF worker --loglevel=info
     volumes:
       - .:/code
     env_file:
@@ -57,7 +56,7 @@ services:
 
   celery-beat:
     build: .
-    command: celery -A Atom_Habits beat --loglevel=info
+    command: celery -A DjangoDRF beat --loglevel=info
     volumes:
       - .:/code
     env_file:
