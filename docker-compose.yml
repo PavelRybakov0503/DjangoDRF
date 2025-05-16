@@ -1,77 +1,75 @@
-version: '3.9'
-
 services:
-  web:
+  app:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    command: sh -c "python manage.py collectstatic --no-input && python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+
     volumes:
-      - .:/code
-      - static_volumes:/code/static
-    ports:
-      - "8000:8000"
-    env_file:
-      - .env
+      - .:/app
+      - static_volume:/app/staticfiles
+    expose:
+      - "8000"
     depends_on:
       db:
         condition: service_healthy
-      redis:
-        condition: service_started
-    networks:
-      - default
+    env_file:
+      - .env
+
+  nginx:
+    build:
+      context: ./nginx
+    ports:
+      - "80:80"
+    volumes:
+      - static_volume:/app/staticfiles
+    depends_on:
+      - app
 
   db:
-    image: postgres:16.0
+    image: postgres:16-alpine
     env_file:
       - .env
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
+    expose:
+      - "5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg-isready -U $${POSTGRES_USER}"]
-      interval: 30s
-      timeout: 10s
+      test: [ "CMD-SHELL", "pg_isready -d ${POSTGRES_DB} -U ${POSTGRES_USER}" ]
+      interval: 10s
       retries: 5
-    ports:
-      - "5432:5432"
-    networks:
-      - default
+      timeout: 5s
 
   redis:
-    image: redis:7.0
-    ports:
-      - "6379:6379"
-    networks:
-      - default
+    image: redis:latest
+    expose:
+      - "6379"
 
   celery:
     build: .
-    command: celery -A Atom_Habits worker --loglevel=info
+    command:
+      bash -c "celery -A config worker --loglevel=info --pool=solo"
+    restart: on-failure
     volumes:
-      - .:/code
+      - .:/app
+    depends_on:
+      - redis
+      - db
     env_file:
       - .env
-    depends_on:
-      - db
-      - redis
-    networks:
-      - default
 
   celery-beat:
     build: .
-    command: celery -A Atom_Habits beat --loglevel=info
+    command:
+      bash -c "celery -A config beat --loglevel=info"
+    restart: on-failure
     volumes:
-      - .:/code
+      - .:/app
+    depends_on:
+      - redis
+      - db
     env_file:
       - .env
-    depends_on:
-      - db
-      - redis
-      - celery
-    networks:
-      - default
+
 
 volumes:
-  postgres_data:
-  static_volumes:
-
-networks:
-  default:
+  pg_data:
+  static_volume:

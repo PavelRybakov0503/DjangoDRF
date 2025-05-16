@@ -21,7 +21,6 @@ def create_price_in_stripe(stripe_product_id, amount):
         product = stripe_product_id,
     )
 
-
 def create_session_in_stripe(price):
     """Создаёт сессию на оплату в Stripe API."""
     session = stripe.checkout.Session.create(
