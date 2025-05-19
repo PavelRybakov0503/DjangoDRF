@@ -18,8 +18,9 @@ def create_price_in_stripe(stripe_product_id, amount):
     return stripe.Price.create(
         currency="rub",
         unit_amount=amount * 100,
-        product = stripe_product_id,
+        product=stripe_product_id,
     )
+
 
 def create_session_in_stripe(price):
     """Создаёт сессию на оплату в Stripe API."""

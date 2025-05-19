@@ -15,7 +15,7 @@ class MaterialsAPITestCase(APITestCase):
         self.lesson = Lesson.objects.create(
             title="Test Lesson",
             description="Test Lesson Description",
-            video_url = "https://youtube.com/test",
+            video_url="https://youtube.com/test",
             course=self.course,
             owner=self.user,
         )
