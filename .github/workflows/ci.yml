@@ -75,7 +75,18 @@ jobs:
         uses: webfactory/ssh-agent@v0.8.0
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }}
-
+      - name: Create .env file
+        run: |
+          touch .env
+          echo '"${{ secrets.ENV_FILE }}"' | sed "s/\"//g" > .env
+      - name: copy env file
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "*"
+          target: ${{ secrets.DEPLOY_DIR }}
       - name: Run Server
         run: |
           ssh -o StrictHostKeyChecking=no -vT ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
