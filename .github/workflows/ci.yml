@@ -44,29 +44,6 @@ jobs:
         env:
           SECRET_KEY: test_secret_key
 
-
-  copy_files_in_server:
-    needs: tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
-
-      - name: Create .env file
-        run: |
-          touch .env
-          echo '"${{ secrets.ENV_FILE }}"' | sed "s/\"//g" > .env
-
-      - name: copy env file
-        uses: appleboy/scp-action@v1
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "*"
-          target: ${{ secrets.DEPLOY_DIR }}
-
-
   run_server:
     needs: [ copy_files_in_server ]
     runs-on: ubuntu-latest
