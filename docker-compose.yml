@@ -1,4 +1,5 @@
 services:
+
   app:
     build: .
     command: sh -c "python manage.py collectstatic --no-input && python manage.py migrate && gunicorn config.wsgi:application --bind 0.0.0.0:8000"
@@ -38,6 +39,7 @@ services:
       interval: 10s
       retries: 5
       timeout: 5s
+
 
   redis:
     image: redis:latest
