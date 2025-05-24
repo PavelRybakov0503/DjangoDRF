@@ -62,13 +62,15 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "*"
+          source: ".env docker-compose.yml"
+          # source: "*"
           target: ${{ secrets.DEPLOY_DIR }}
           debug: true
       - name: Run Server
         run: |
           ssh -o StrictHostKeyChecking=no -vT ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             cd ${{ secrets.DEPLOY_DIR }}
+          
             sudo docker compose down
             sudo docker container prune -f
             sudo docker compose up -d
