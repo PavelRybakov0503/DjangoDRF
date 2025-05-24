@@ -44,18 +44,19 @@ jobs:
         env:
           SECRET_KEY: test_secret_key
 
-  run_server:
+
+  copy_files_in_server:
     needs: tests
     runs-on: ubuntu-latest
     steps:
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_KEY }}
+      - name: Check out code
+        uses: actions/checkout@v3
+
       - name: Create .env file
         run: |
           touch .env
           echo '"${{ secrets.ENV_FILE }}"' | sed "s/\"//g" > .env
+
       - name: copy env file
         uses: appleboy/scp-action@v1
         with:
@@ -64,7 +65,17 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           source: "*"
           target: ${{ secrets.DEPLOY_DIR }}
-          debug: true
+
+
+  run_server:
+    needs: [ copy_files_in_server ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
       - name: Run Server
         run: |
           ssh -o StrictHostKeyChecking=no -vT ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
@@ -73,3 +84,81 @@ jobs:
             sudo docker container prune -f
             sudo docker compose up -d
           EOF
+
+#name: Django CI
+#
+#on: [push]
+#
+#jobs:
+#  lint:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Check out code
+#        uses: actions/checkout@v3
+#
+#      - name: Set up Python
+#        uses: actions/setup-python@v4
+#        with:
+#          python-version: "3.12"
+#
+#      - name: Install flake8
+#        run: |
+#          python -m pip install --upgrade pip
+#          pip install flake8
+#
+#      - name: Run Flake8
+#        run: flake8 .
+#
+#  tests:
+#    needs: lint
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Check out code
+#        uses: actions/checkout@v3
+#
+#      - name: Set up Python
+#        uses: actions/setup-python@v4
+#        with:
+#          python-version: "3.12"
+#
+#      - name: Install dependencies
+#        run: |
+#          python -m pip install --upgrade pip
+#          pip install -r requirements.txt
+#
+#      - name: Run tests
+#        run: python manage.py test
+#        env:
+#          SECRET_KEY: test_secret_key
+#
+#  run_server:
+#    needs: tests
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Set up SSH
+#        uses: webfactory/ssh-agent@v0.8.0
+#        with:
+#          ssh-private-key: ${{ secrets.SSH_KEY }}
+#      - name: Create .env file
+#        run: |
+#          touch .env
+#          echo '"${{ secrets.ENV_FILE }}"' | sed "s/\"//g" > .env
+#      - name: copy env file
+#        uses: appleboy/scp-action@v1
+#        with:
+#          host: ${{ secrets.SERVER_IP }}
+#          username: ${{ secrets.SSH_USER }}
+#          key: ${{ secrets.SSH_KEY }}
+#          # source: ".env docker-compose.yml"
+#          source: "*"
+#          target: ${{ secrets.DEPLOY_DIR }}
+#          debug: true
+#      - name: Run Server
+#        run: |
+#          ssh -o StrictHostKeyChecking=no -vT ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
+#            cd ${{ secrets.DEPLOY_DIR }}
+#
+#            sudo docker compose down
+#            sudo docker container prune -f
+#            sudo docker compose up -d
+#          EOF
