@@ -62,8 +62,8 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: ".env docker-compose.yml"
-          # source: "*"
+          # source: ".env docker-compose.yml"
+          source: "*"
           target: ${{ secrets.DEPLOY_DIR }}
           debug: true
       - name: Run Server
